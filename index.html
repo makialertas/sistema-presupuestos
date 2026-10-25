@@ -112,7 +112,9 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
 .stat-tile .card-body { padding: 14px 12px; }
 .stat-tile .month { text-transform: capitalize; font-weight: 700; }
 .stat-tile .amount { font-size: 1.15rem; color: var(--money); font-weight: 700; }
-hr { border-color: var(--line); opacity: 1; }
+.form-check-input { background-color: var(--surface-2); border-color: var(--line); }
+.form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.form-check-label { color: var(--text); font-weight: 500; }
 @media (max-width: 640px) {
   .app-header { align-items: flex-start; }
   .brand h1 { font-size: 1.15rem; }
@@ -194,6 +196,10 @@ hr { border-color: var(--line); opacity: 1; }
               <div class="mb-1">Descuento: $<span id="budgetDiscount">0.00</span></div>
               <div class="total-line">Total: $<span id="budgetTotal">0.00</span></div>
               <div class="transfer-note text-start mt-3" id="transferInfo"></div>
+            </div>
+            <div class="form-check mt-3">
+              <input class="form-check-input" type="checkbox" id="includeBank" checked onchange="renderTransferInfo()">
+              <label class="form-check-label" for="includeBank">Incluir datos bancarios en el presupuesto (PDF y WhatsApp)</label>
             </div>
             <button class="btn btn-primary mt-3" onclick="saveBudget()">Guardar Presupuesto</button>
           </div>
@@ -618,7 +624,8 @@ function transferLine() {
 function renderTransferInfo() {
   const el = document.getElementById('transferInfo');
   if (!el) return;
-  el.textContent = transferLine();
+  const include = document.getElementById('includeBank');
+  el.textContent = (!include || include.checked) ? transferLine() : '';
 }
 
 function renderItems() {
@@ -667,6 +674,7 @@ function saveBudget() {
     discountValue: t.value,
     discount: t.discount,
     total: t.total,
+    includeBank: document.getElementById('includeBank').checked,
     createdAt: new Date().toISOString()
   };
   budgets.push(budget);
@@ -691,6 +699,10 @@ function renderBudgetsList() {
       <td>${b.clientName}</td>
       <td>$${formatMoney(b.total)}</td>
       <td>
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" id="bank-${b.id}" ${b.includeBank === false ? '' : 'checked'} onchange="toggleBank('${b.id}', this.checked)">
+          <label class="form-check-label small" for="bank-${b.id}">Datos bancarios</label>
+        </div>
         <button class="btn btn-sm btn-success me-1" onclick="generatePDF('${b.id}')" title="PDF"><i class="bi bi-file-pdf"></i></button>
         <button class="btn btn-sm btn-whatsapp me-1" onclick="shareWhatsApp('${b.id}')" title="WhatsApp"><i class="bi bi-whatsapp"></i></button>
         <button class="btn btn-sm btn-outline-danger" onclick="deleteBudget('${b.id}')"><i class="bi bi-trash"></i></button>
@@ -699,6 +711,13 @@ function renderBudgetsList() {
   });
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+function toggleBank(id, on) {
+  const b = budgets.find(x => x.id === id);
+  if (!b) return;
+  b.includeBank = !!on;
+  saveAll();
 }
 
 function deleteBudget(id) {
@@ -760,7 +779,7 @@ function generatePDF(budgetId, returnBlob = false) {
   let finalY = doc.lastAutoTable.finalY + 10;
   const subtotal = budget.subtotal != null ? budget.subtotal : budget.total;
   const discount = budget.discount || 0;
-  const bank = transferLine();
+  const bank = budget.includeBank === false ? '' : transferLine();
   const totalsHeight = (discount > 0 ? 26 : 16) + (bank ? 22 : 0);
   if (finalY + totalsHeight > pageH - 15) {
     doc.addPage();
@@ -793,7 +812,8 @@ async function shareWhatsApp(budgetId) {
   const blob = generatePDF(budgetId, true);
   const file = new File([blob], `Presupuesto_${budget.date}.pdf`, { type: 'application/pdf' });
   
-  const text = `Presupuesto para ${budget.clientName}\nFecha: ${budget.date}\nTotal: $${formatMoney(budget.total)}`;
+  const bankText = budget.includeBank === false ? '' : transferLine();
+  const text = `Presupuesto para ${budget.clientName}\nFecha: ${budget.date}\nTotal: $${formatMoney(budget.total)}${bankText ? '\n' + bankText : ''}`;
   
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
