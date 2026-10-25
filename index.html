@@ -609,10 +609,10 @@ function calcTotals() {
 
 function transferLine() {
   const holder = (company.holder || '').trim();
-  const account = (company.account || '').trim();
+  const cbu = (company.cbu || '').trim();
   const alias = (company.alias || '').trim();
-  if (!holder && !account && !alias) return '';
-  return `Para transferencias a ${holder || '-'}, Numero de cuenta: ${account || '-'} Alias: ${alias || '-'}`;
+  if (!holder && !cbu && !alias) return '';
+  return `Para transferencias a ${holder || '-'}, CBU: ${cbu || '-'} Alias: ${alias || '-'}`;
 }
 
 function renderTransferInfo() {
