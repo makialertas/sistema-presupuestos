@@ -103,7 +103,9 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
 }
 .totals-box .total-line { font-size: 1.35rem; font-weight: 700; color: var(--money); }
 .transfer-note {
-  margin-top: 8px; color: var(--muted); font-size: .92rem;
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--text); font-size: .95rem; line-height: 1.45;
 }
 .logo-preview { max-height: 80px; max-width: 200px; border-radius: 8px; background: #fff; padding: 6px; }
 .table-responsive { max-height: 420px; overflow: auto; }
@@ -191,9 +193,9 @@ hr { border-color: var(--line); opacity: 1; }
               </div>
               <div class="mb-1">Descuento: $<span id="budgetDiscount">0.00</span></div>
               <div class="total-line">Total: $<span id="budgetTotal">0.00</span></div>
+              <div class="transfer-note text-start mt-3" id="transferInfo"></div>
             </div>
             <button class="btn btn-primary mt-3" onclick="saveBudget()">Guardar Presupuesto</button>
-            <div class="transfer-note border-top pt-2 mt-3" id="transferInfo"></div>
           </div>
         </div>
       </div>
@@ -607,10 +609,10 @@ function calcTotals() {
 
 function transferLine() {
   const holder = (company.holder || '').trim();
-  const cbu = (company.cbu || '').trim();
+  const account = (company.account || '').trim();
   const alias = (company.alias || '').trim();
-  if (!holder && !cbu && !alias) return '';
-  return `Transferencias a (${holder || '-'}) nro de cbu: ${cbu || '-'} (Alias: ${alias || '-'})`;
+  if (!holder && !account && !alias) return '';
+  return `Para transferencias a ${holder || '-'}, Numero de cuenta: ${account || '-'} Alias: ${alias || '-'}`;
 }
 
 function renderTransferInfo() {
@@ -748,7 +750,6 @@ function generatePDF(budgetId, returnBlob = false) {
   const tableY = y + 55;
   doc.autoTable({
     startY: tableY,
-    margin: { bottom: 28 },
     head: [['Artículo', 'Cantidad', 'Precio Unit.', 'Subtotal']],
     body: budget.items.map(it => [it.name, it.quantity, '$' + formatMoney(it.unitPrice), '$' + formatMoney(it.subtotal)]),
     theme: 'grid',
@@ -759,8 +760,9 @@ function generatePDF(budgetId, returnBlob = false) {
   let finalY = doc.lastAutoTable.finalY + 10;
   const subtotal = budget.subtotal != null ? budget.subtotal : budget.total;
   const discount = budget.discount || 0;
-  const totalsHeight = discount > 0 ? 26 : 16;
-  if (finalY + totalsHeight > pageH - 24) {
+  const bank = transferLine();
+  const totalsHeight = (discount > 0 ? 26 : 16) + (bank ? 22 : 0);
+  if (finalY + totalsHeight > pageH - 15) {
     doc.addPage();
     finalY = 20;
   }
@@ -770,21 +772,12 @@ function generatePDF(budgetId, returnBlob = false) {
     const label = budget.discountType === 'percent' ? `Descuento (${budget.discountValue}%): ` : 'Descuento: ';
     doc.text(`${label}$${formatMoney(discount)}`, 120, finalY + 6);
   }
+  const totalY = finalY + (discount > 0 ? 14 : 8);
   doc.setFontSize(12);
-  doc.text(`TOTAL: $${formatMoney(budget.total)}`, 120, finalY + (discount > 0 ? 14 : 8));
-
-  const bank = transferLine();
+  doc.text(`TOTAL: $${formatMoney(budget.total)}`, 120, totalY);
   if (bank) {
-    const pages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(9);
-      doc.setTextColor(70);
-      doc.setDrawColor(170);
-      doc.line(15, pageH - 18, 195, pageH - 18);
-      doc.text(doc.splitTextToSize(bank, 180), 15, pageH - 12);
-    }
-    doc.setTextColor(0);
+    doc.setFontSize(10);
+    doc.text(doc.splitTextToSize(bank, 180), 15, totalY + 16);
   }
   
   if (returnBlob) {
