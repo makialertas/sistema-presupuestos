@@ -226,6 +226,7 @@ body { background: #121212; color: #e0e0e0; }
             <div class="mb-3"><label>Email</label><input id="companyEmail" class="form-control"></div>
             <div class="mb-3"><label>CUIT</label><input id="companyCuit" class="form-control"></div>
             <div class="mb-3"><label>N° de cuenta</label><input id="companyAccount" class="form-control"></div>
+            <div class="mb-3"><label>CBU</label><input id="companyCbu" class="form-control" inputmode="numeric"></div>
             <div class="mb-3"><label>Alias</label><input id="companyAlias" class="form-control"></div>
             <button class="btn btn-primary" onclick="saveCompany()">Guardar Datos</button>
           </div>
@@ -505,10 +506,10 @@ function calcTotals() {
 function renderTransferInfo() {
   const el = document.getElementById('transferInfo');
   if (!el) return;
-  const account = (company.account || '').trim();
+  const cbu = (company.cbu || '').trim();
   const alias = (company.alias || '').trim();
-  if (!account && !alias) { el.textContent = ''; return; }
-  el.textContent = `Transferencias a: ${account || '-'}  Alias: ${alias || '-'}`;
+  if (!cbu && !alias) { el.textContent = ''; return; }
+  el.textContent = `Transferencias a: CBU ${cbu || '-'}  Alias: ${alias || '-'}`;
 }
 
 function renderItems() {
@@ -657,11 +658,11 @@ function generatePDF(budgetId, returnBlob = false) {
   }
   doc.setFontSize(12);
   doc.text(`TOTAL: $${formatMoney(budget.total)}`, 120, finalY + (discount > 0 ? 14 : 8));
-  const account = (company.account || '').trim();
+  const cbu = (company.cbu || '').trim();
   const alias = (company.alias || '').trim();
-  if (account || alias) {
+  if (cbu || alias) {
     doc.setFontSize(11);
-    doc.text(`Transferencias a: ${account || '-'}`, 15, finalY + 24);
+    doc.text(`Transferencias a: CBU ${cbu || '-'}`, 15, finalY + 24);
     doc.text(`Alias: ${alias || '-'}`, 15, finalY + 30);
   }
   
@@ -860,6 +861,7 @@ function loadCompany() {
   document.getElementById('companyEmail').value = company.email || '';
   document.getElementById('companyCuit').value = company.cuit || '';
   document.getElementById('companyAccount').value = company.account || '';
+  document.getElementById('companyCbu').value = company.cbu || '';
   document.getElementById('companyAlias').value = company.alias || '';
   const prev = document.getElementById('logoPreview');
   if (company.logo) {
@@ -879,6 +881,7 @@ function saveCompany() {
   company.email = document.getElementById('companyEmail').value.trim();
   company.cuit = document.getElementById('companyCuit').value.trim();
   company.account = document.getElementById('companyAccount').value.trim();
+  company.cbu = document.getElementById('companyCbu').value.trim();
   company.alias = document.getElementById('companyAlias').value.trim();
   saveAll();
   renderTransferInfo();
