@@ -225,6 +225,8 @@ body { background: #121212; color: #e0e0e0; }
             <div class="mb-3"><label>Teléfono</label><input id="companyPhone" class="form-control"></div>
             <div class="mb-3"><label>Email</label><input id="companyEmail" class="form-control"></div>
             <div class="mb-3"><label>CUIT</label><input id="companyCuit" class="form-control"></div>
+            <h6 class="mt-3">Datos bancarios</h6>
+            <div class="mb-3"><label>Titular de la cuenta</label><input id="companyHolder" class="form-control"></div>
             <div class="mb-3"><label>N° de cuenta</label><input id="companyAccount" class="form-control"></div>
             <div class="mb-3"><label>CBU</label><input id="companyCbu" class="form-control" inputmode="numeric"></div>
             <div class="mb-3"><label>Alias</label><input id="companyAlias" class="form-control"></div>
@@ -503,13 +505,18 @@ function calcTotals() {
   return { subtotal, discount, total: subtotal - discount, type, value };
 }
 
+function transferLine() {
+  const holder = (company.holder || '').trim();
+  const cbu = (company.cbu || '').trim();
+  const alias = (company.alias || '').trim();
+  if (!holder && !cbu && !alias) return '';
+  return `Transferencias a (${holder || '-'}) nro de cbu: ${cbu || '-'} (Alias: ${alias || '-'})`;
+}
+
 function renderTransferInfo() {
   const el = document.getElementById('transferInfo');
   if (!el) return;
-  const cbu = (company.cbu || '').trim();
-  const alias = (company.alias || '').trim();
-  if (!cbu && !alias) { el.textContent = ''; return; }
-  el.textContent = `Transferencias a: CBU ${cbu || '-'}  Alias: ${alias || '-'}`;
+  el.textContent = transferLine();
 }
 
 function renderItems() {
@@ -658,12 +665,11 @@ function generatePDF(budgetId, returnBlob = false) {
   }
   doc.setFontSize(12);
   doc.text(`TOTAL: $${formatMoney(budget.total)}`, 120, finalY + (discount > 0 ? 14 : 8));
-  const cbu = (company.cbu || '').trim();
-  const alias = (company.alias || '').trim();
-  if (cbu || alias) {
+  const line = transferLine();
+  if (line) {
     doc.setFontSize(11);
-    doc.text(`Transferencias a: CBU ${cbu || '-'}`, 15, finalY + 24);
-    doc.text(`Alias: ${alias || '-'}`, 15, finalY + 30);
+    const lines = doc.splitTextToSize(line, 180);
+    doc.text(lines, 15, finalY + 24);
   }
   
   if (returnBlob) {
@@ -860,6 +866,7 @@ function loadCompany() {
   document.getElementById('companyPhone').value = company.phone || '';
   document.getElementById('companyEmail').value = company.email || '';
   document.getElementById('companyCuit').value = company.cuit || '';
+  document.getElementById('companyHolder').value = company.holder || '';
   document.getElementById('companyAccount').value = company.account || '';
   document.getElementById('companyCbu').value = company.cbu || '';
   document.getElementById('companyAlias').value = company.alias || '';
@@ -880,6 +887,7 @@ function saveCompany() {
   company.phone = document.getElementById('companyPhone').value.trim();
   company.email = document.getElementById('companyEmail').value.trim();
   company.cuit = document.getElementById('companyCuit').value.trim();
+  company.holder = document.getElementById('companyHolder').value.trim();
   company.account = document.getElementById('companyAccount').value.trim();
   company.cbu = document.getElementById('companyCbu').value.trim();
   company.alias = document.getElementById('companyAlias').value.trim();
