@@ -917,7 +917,7 @@ function renderArticleStats() {
   let data = Object.values(map);
   data.forEach(d => {
     d.profit = d.total - d.cost;
-    d.profitPercent = d.cost > 0 ? (d.profit / d.cost) * 100 : 0;
+    d.profitPercent = d.total > 0 ? (d.profit / d.total) * 100 : 0;
   });
   if (articleSort === 'qty') data.sort((a,b) => b.qty - a.qty);
   else if (articleSort === 'profit') data.sort((a,b) => b.profitPercent - a.profitPercent);
