@@ -79,7 +79,20 @@ body { background: #121212; color: #e0e0e0; }
                 <tbody></tbody>
               </table>
             </div>
-            <div class="text-end"><h4>Total: $<span id="budgetTotal">0.00</span></h4></div>
+            <div class="text-end mt-2">
+              <div class="mb-1">Subtotal: $<span id="budgetSubtotal">0.00</span></div>
+              <div class="d-inline-flex align-items-center gap-2 mb-1">
+                <label class="mb-0">Descuento</label>
+                <input type="number" id="discountValue" class="form-control form-control-sm" style="width:110px" min="0" step="0.01" value="0" oninput="renderItems()">
+                <select id="discountType" class="form-select form-select-sm" style="width:80px" onchange="renderItems()">
+                  <option value="percent">%</option>
+                  <option value="amount">$</option>
+                </select>
+              </div>
+              <div class="mb-1">Descuento: $<span id="budgetDiscount">0.00</span></div>
+              <h4 class="mb-1">Total: $<span id="budgetTotal">0.00</span></h4>
+              <div class="small text-muted" id="transferInfo"></div>
+            </div>
             <button class="btn btn-primary" onclick="saveBudget()">Guardar Presupuesto</button>
           </div>
         </div>
@@ -212,6 +225,8 @@ body { background: #121212; color: #e0e0e0; }
             <div class="mb-3"><label>Teléfono</label><input id="companyPhone" class="form-control"></div>
             <div class="mb-3"><label>Email</label><input id="companyEmail" class="form-control"></div>
             <div class="mb-3"><label>CUIT</label><input id="companyCuit" class="form-control"></div>
+            <div class="mb-3"><label>N° de cuenta</label><input id="companyAccount" class="form-control"></div>
+            <div class="mb-3"><label>Alias</label><input id="companyAlias" class="form-control"></div>
             <button class="btn btn-primary" onclick="saveCompany()">Guardar Datos</button>
           </div>
           <div class="col-md-6">
@@ -292,7 +307,7 @@ document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
   btn.addEventListener('shown.bs.tab', (event) => {
     const tabId = event.target.getAttribute('data-bs-target').replace('#', '');
     if (tabId === 'estadisticas') renderStats();
-    if (tabId === 'presupuesto') { renderBudgetSelects(); renderBudgetsList(); }
+    if (tabId === 'presupuesto') { renderBudgetSelects(); renderBudgetsList(); renderTransferInfo(); }
     if (tabId === 'articulos') renderArticles();
     if (tabId === 'clientes') renderClients();
     if (tabId === 'datos') loadCompany();
@@ -477,12 +492,29 @@ function addItem() {
   document.getElementById('itemArticle').value = '';
 }
 
+function calcTotals() {
+  const subtotal = currentItems.reduce((s, i) => s + i.subtotal, 0);
+  const type = document.getElementById('discountType')?.value || 'percent';
+  let value = parseFloat(document.getElementById('discountValue')?.value) || 0;
+  if (value < 0) value = 0;
+  let discount = type === 'percent' ? subtotal * (value / 100) : value;
+  if (discount > subtotal) discount = subtotal;
+  return { subtotal, discount, total: subtotal - discount, type, value };
+}
+
+function renderTransferInfo() {
+  const el = document.getElementById('transferInfo');
+  if (!el) return;
+  const account = (company.account || '').trim();
+  const alias = (company.alias || '').trim();
+  if (!account && !alias) { el.textContent = ''; return; }
+  el.textContent = `Transferencias a: ${account || '-'}  Alias: ${alias || '-'}`;
+}
+
 function renderItems() {
   const tbody = document.querySelector('#itemsTable tbody');
   tbody.innerHTML = '';
-  let total = 0;
   currentItems.forEach((it, idx) => {
-    total += it.subtotal;
     tbody.innerHTML += `<tr>
       <td>${it.name}</td>
       <td>${it.quantity}</td>
@@ -491,7 +523,11 @@ function renderItems() {
       <td><button class="btn btn-sm btn-danger" onclick="removeItem(${idx})"><i class="bi bi-x"></i></button></td>
     </tr>`;
   });
-  document.getElementById('budgetTotal').textContent = formatMoney(total);
+  const t = calcTotals();
+  document.getElementById('budgetSubtotal').textContent = formatMoney(t.subtotal);
+  document.getElementById('budgetDiscount').textContent = formatMoney(t.discount);
+  document.getElementById('budgetTotal').textContent = formatMoney(t.total);
+  renderTransferInfo();
 }
 
 function removeItem(idx) {
@@ -506,7 +542,7 @@ function saveBudget() {
   if (!currentItems.length) return alert('Agregue al menos un ítem');
   if (!date) return alert('Seleccione una fecha');
   const client = clients.find(c => c.id === clientId);
-  const total = currentItems.reduce((s, i) => s + i.subtotal, 0);
+  const t = calcTotals();
   const nextNumber = budgets.length ? Math.max(...budgets.map(b => b.number || 0)) + 1 : 1;
   const budget = {
     id: genId(),
@@ -516,12 +552,18 @@ function saveBudget() {
     clientData: { ...client },
     date,
     items: [...currentItems],
-    total,
+    subtotal: t.subtotal,
+    discountType: t.type,
+    discountValue: t.value,
+    discount: t.discount,
+    total: t.total,
     createdAt: new Date().toISOString()
   };
   budgets.push(budget);
   saveAll();
   currentItems = [];
+  document.getElementById('discountValue').value = '0';
+  document.getElementById('discountType').value = 'percent';
   renderItems();
   document.getElementById('budgetClient').value = '';
   renderBudgetsList();
@@ -573,7 +615,7 @@ function generatePDF(budgetId, returnBlob = false) {
   }
   
   doc.setFontSize(16);
-  doc.text(company.name || 'PRESUPUESTO', company.logo ? 65 : 15, 20);
+  doc.text(company.name || '', company.logo ? 65 : 15, 20);
   doc.setFontSize(10);
   let infoY = 28;
   if (company.address) { doc.text(company.address, company.logo ? 65 : 15, infoY); infoY += 5; }
@@ -605,8 +647,23 @@ function generatePDF(budgetId, returnBlob = false) {
   });
   
   const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(11);
+  const subtotal = budget.subtotal != null ? budget.subtotal : budget.total;
+  const discount = budget.discount || 0;
+  doc.text(`Subtotal: $${formatMoney(subtotal)}`, 120, finalY);
+  if (discount > 0) {
+    const label = budget.discountType === 'percent' ? `Descuento (${budget.discountValue}%): ` : 'Descuento: ';
+    doc.text(`${label}$${formatMoney(discount)}`, 120, finalY + 6);
+  }
   doc.setFontSize(12);
-  doc.text(`TOTAL: $${formatMoney(budget.total)}`, 140, finalY);
+  doc.text(`TOTAL: $${formatMoney(budget.total)}`, 120, finalY + (discount > 0 ? 14 : 8));
+  const account = (company.account || '').trim();
+  const alias = (company.alias || '').trim();
+  if (account || alias) {
+    doc.setFontSize(11);
+    doc.text(`Transferencias a: ${account || '-'}`, 15, finalY + 24);
+    doc.text(`Alias: ${alias || '-'}`, 15, finalY + 30);
+  }
   
   if (returnBlob) {
     return doc.output('blob');
@@ -802,6 +859,8 @@ function loadCompany() {
   document.getElementById('companyPhone').value = company.phone || '';
   document.getElementById('companyEmail').value = company.email || '';
   document.getElementById('companyCuit').value = company.cuit || '';
+  document.getElementById('companyAccount').value = company.account || '';
+  document.getElementById('companyAlias').value = company.alias || '';
   const prev = document.getElementById('logoPreview');
   if (company.logo) {
     prev.src = company.logo;
@@ -819,7 +878,10 @@ function saveCompany() {
   company.phone = document.getElementById('companyPhone').value.trim();
   company.email = document.getElementById('companyEmail').value.trim();
   company.cuit = document.getElementById('companyCuit').value.trim();
+  company.account = document.getElementById('companyAccount').value.trim();
+  company.alias = document.getElementById('companyAlias').value.trim();
   saveAll();
+  renderTransferInfo();
 }
 
 document.getElementById('logoInput').addEventListener('change', function(e) {
@@ -905,6 +967,7 @@ renderArticles();
 renderClients();
 renderBudgetsList();
 loadCompany();
+renderItems();
 </script>
 </body>
 </html>
