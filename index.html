@@ -6,28 +6,128 @@
 <title>App Presupuestos</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body { background: #121212; color: #e0e0e0; }
-.tab-content-custom { display: none; }
-/* display is controlled by the radio :checked ~ rules above */
-.logo-preview { max-height: 80px; max-width: 200px; }
-.table-responsive { max-height: 400px; overflow-y: auto; }
-.nav-tabs .nav-link { font-weight: 500; color: #bbb; }
-.nav-tabs .nav-link.active { color: #fff; background-color: #1e1e1e; border-color: #444 #444 #1e1e1e; }
-.card { box-shadow: 0 2px 4px rgba(0,0,0,.4); background-color: #1e1e1e; border-color: #333; }
-.card-header { background-color: #2a2a2a; border-bottom: 1px solid #444; }
-.table { color: #e0e0e0; }
-.table-striped > tbody > tr:nth-of-type(odd) > * { background-color: rgba(255,255,255,.05); }
-.form-control, .form-select { background-color: #2a2a2a; color: #e0e0e0; border-color: #444; }
-.form-control:focus, .form-select:focus { background-color: #2a2a2a; color: #fff; border-color: #0d6efd; }
-.btn-whatsapp { background: #25D366; color: white; }
-.btn-whatsapp:hover { background: #128C7E; color: white; }
-.text-muted { color: #aaa !important; }
+:root {
+  --bg: #0c1218;
+  --surface: #141c26;
+  --surface-2: #1b2633;
+  --line: #2c3b4c;
+  --text: #e7eef6;
+  --muted: #93a4b8;
+  --accent: #3aa0d8;
+  --accent-2: #1f7eae;
+  --money: #3cbf8f;
+  --danger: #e06a6a;
+  --radius: 14px;
+}
+html, body { min-height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(58,160,216,.16), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Source Sans 3", system-ui, sans-serif;
+  line-height: 1.5;
+}
+h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3", sans-serif; }
+.app-shell { max-width: 1180px; margin: 0 auto; padding: 28px 16px 48px; }
+.app-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-bottom: 22px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: linear-gradient(160deg, #4eb4e8, #1d6f9c);
+  display: grid; place-items: center; color: #fff; font-weight: 700;
+  box-shadow: 0 8px 20px rgba(30,120,170,.28);
+}
+.brand h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.02em; font-weight: 700; }
+.brand p { margin: 0; color: var(--muted); font-size: .92rem; }
+.nav-tabs {
+  border: 0; gap: 6px; background: var(--surface); padding: 6px;
+  border-radius: 16px; border: 1px solid var(--line); flex-wrap: nowrap; overflow-x: auto;
+}
+.nav-tabs .nav-link {
+  border: 0; border-radius: 11px; color: var(--muted); font-weight: 600;
+  padding: 10px 14px; white-space: nowrap;
+}
+.nav-tabs .nav-link:hover { color: var(--text); background: rgba(255,255,255,.04); }
+.nav-tabs .nav-link.active {
+  color: #062033; background: var(--accent); border: 0;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0,0,0,.22); color: var(--text);
+}
+.card-header {
+  background: transparent; border-bottom: 1px solid var(--line);
+  padding: 16px 18px; border-radius: var(--radius) var(--radius) 0 0;
+}
+.card-header h5, .card-header h6 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.card-body { padding: 18px; }
+.table { color: var(--text); --bs-table-bg: transparent; --bs-table-color: var(--text); margin-bottom: 0; }
+.table thead th {
+  color: var(--muted); font-size: .78rem; letter-spacing: .04em; text-transform: uppercase;
+  font-weight: 700; border-bottom-color: var(--line);
+}
+.table td, .table th { border-color: var(--line); vertical-align: middle; }
+.table-striped > tbody > tr:nth-of-type(odd) > * { background-color: rgba(255,255,255,.03); }
+.form-control, .form-select {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 10px; min-height: 42px;
+}
+.form-control:focus, .form-select:focus {
+  background: var(--surface-2); color: #fff; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(58,160,216,.22);
+}
+.form-label, label { color: var(--muted); font-size: .86rem; font-weight: 600; margin-bottom: 4px; }
+.btn { border-radius: 10px; font-weight: 700; min-height: 40px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #062033; }
+.btn-primary:hover { background: #57b3e4; border-color: #57b3e4; color: #062033; }
+.btn-success { background: #1f8f68; border-color: #1f8f68; }
+.btn-outline-primary { color: #8fd0f0; border-color: #35617c; }
+.btn-outline-primary:hover { background: var(--accent); color: #062033; border-color: var(--accent); }
+.btn-outline-danger { color: #f0a0a0; border-color: #6a3a3a; }
+.btn-secondary { background: #243140; border-color: #243140; }
+.btn-whatsapp { background: #1ea85a; color: white; border: 0; }
+.btn-whatsapp:hover { background: #178a49; color: white; }
+.text-muted { color: var(--muted) !important; }
+.text-success { color: var(--money) !important; }
+.totals-box {
+  margin-top: 8px; padding: 14px 16px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.totals-box .total-line { font-size: 1.35rem; font-weight: 700; color: var(--money); }
+.transfer-note {
+  margin-top: 8px; color: var(--muted); font-size: .92rem;
+}
+.logo-preview { max-height: 80px; max-width: 200px; border-radius: 8px; background: #fff; padding: 6px; }
+.table-responsive { max-height: 420px; overflow: auto; }
+.stat-tile .card-body { padding: 14px 12px; }
+.stat-tile .month { text-transform: capitalize; font-weight: 700; }
+.stat-tile .amount { font-size: 1.15rem; color: var(--money); font-weight: 700; }
+hr { border-color: var(--line); opacity: 1; }
+@media (max-width: 640px) {
+  .app-header { align-items: flex-start; }
+  .brand h1 { font-size: 1.15rem; }
+}
 </style>
 </head>
 <body>
-<div class="container-fluid py-3">
-  <h1 class="text-center mb-4"><i class="bi bi-file-earmark-text"></i> Sistema de Presupuestos</h1>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">P</div>
+      <div>
+        <h1>Sistema de Presupuestos</h1>
+        <p>Clientes, artículos y envío por WhatsApp</p>
+      </div>
+    </div>
+  </header>
   
   <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -79,9 +179,9 @@ body { background: #121212; color: #e0e0e0; }
                 <tbody></tbody>
               </table>
             </div>
-            <div class="text-end mt-2">
+            <div class="totals-box text-end">
               <div class="mb-1">Subtotal: $<span id="budgetSubtotal">0.00</span></div>
-              <div class="d-inline-flex align-items-center gap-2 mb-1">
+              <div class="d-inline-flex align-items-center gap-2 mb-1 flex-wrap justify-content-end">
                 <label class="mb-0">Descuento</label>
                 <input type="number" id="discountValue" class="form-control form-control-sm" style="width:110px" min="0" step="0.01" value="0" oninput="renderItems()">
                 <select id="discountType" class="form-select form-select-sm" style="width:80px" onchange="renderItems()">
@@ -90,8 +190,8 @@ body { background: #121212; color: #e0e0e0; }
                 </select>
               </div>
               <div class="mb-1">Descuento: $<span id="budgetDiscount">0.00</span></div>
-              <h4 class="mb-1">Total: $<span id="budgetTotal">0.00</span></h4>
-              <div class="small text-muted" id="transferInfo"></div>
+              <div class="total-line">Total: $<span id="budgetTotal">0.00</span></div>
+              <div class="transfer-note" id="transferInfo"></div>
             </div>
             <button class="btn btn-primary" onclick="saveBudget()">Guardar Presupuesto</button>
           </div>
@@ -750,10 +850,10 @@ function renderMonthlyStats() {
       const [y, m] = d.month.split('-');
       const monthName = new Date(y, m-1).toLocaleString('es-AR', { month: 'long' });
       return `<div class="col-6 col-md-4 col-lg-3">
-        <div class="card bg-dark border-secondary h-100">
-          <div class="card-body text-center p-2">
-            <div class="text-capitalize fw-bold">${monthName} ${y}</div>
-            <div class="fs-5 text-success">$${formatMoney(d.total)}</div>
+        <div class="card stat-tile h-100">
+          <div class="card-body text-center">
+            <div class="month">${monthName} ${y}</div>
+            <div class="amount">$${formatMoney(d.total)}</div>
             <small class="text-muted">${d.count} presup. · ${d.qty} art.</small>
           </div>
         </div>
