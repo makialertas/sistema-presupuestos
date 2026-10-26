@@ -177,6 +177,13 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
               <div class="col-md-3"><input type="number" id="itemPrice" class="form-control" placeholder="Precio" step="0.01"></div>
               <div class="col-md-2"><button class="btn btn-success w-100" onclick="addItem()">Agregar</button></div>
             </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-5"><input id="occasionalName" class="form-control" placeholder="Artículo ocasional"></div>
+              <div class="col-md-2"><input type="number" id="occasionalQty" class="form-control" placeholder="Cant." min="1" value="1"></div>
+              <div class="col-md-3"><input type="number" id="occasionalPrice" class="form-control" placeholder="Precio" step="0.01"></div>
+              <div class="col-md-2"><button class="btn btn-outline-primary w-100" onclick="addOccasionalItem()">Ocasional</button></div>
+            </div>
+            <p class="small text-muted mb-2">El ocasional entra en el total del presupuesto, pero no en las estadísticas.</p>
             <div class="table-responsive">
               <table class="table table-sm" id="itemsTable">
                 <thead><tr><th>Artículo</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
@@ -605,6 +612,27 @@ function addItem() {
   document.getElementById('itemArticle').value = '';
 }
 
+function addOccasionalItem() {
+  const name = document.getElementById('occasionalName').value.trim();
+  const qty = parseFloat(document.getElementById('occasionalQty').value) || 1;
+  const price = parseFloat(document.getElementById('occasionalPrice').value) || 0;
+  if (!name) return alert('Escribí el nombre del artículo ocasional');
+  if (qty <= 0) return alert('La cantidad debe ser mayor a 0');
+  currentItems.push({
+    articleId: null,
+    name,
+    quantity: qty,
+    unitPrice: price,
+    unitCost: 0,
+    subtotal: qty * price,
+    occasional: true
+  });
+  renderItems();
+  document.getElementById('occasionalName').value = '';
+  document.getElementById('occasionalQty').value = 1;
+  document.getElementById('occasionalPrice').value = '';
+}
+
 function calcTotals() {
   const subtotal = currentItems.reduce((s, i) => s + i.subtotal, 0);
   const type = document.getElementById('discountType')?.value || 'percent';
@@ -635,7 +663,7 @@ function renderItems() {
   tbody.innerHTML = '';
   currentItems.forEach((it, idx) => {
     tbody.innerHTML += `<tr>
-      <td>${it.name}</td>
+      <td>${it.name}${it.occasional ? ' <span class="text-muted">(ocasional)</span>' : ''}</td>
       <td>${it.quantity}</td>
       <td>$${formatMoney(it.unitPrice)}</td>
       <td>$${formatMoney(it.subtotal)}</td>
@@ -891,13 +919,21 @@ function renderStats() {
   renderClientStats();
 }
 
+function statsAmount(b) {
+  const items = b.items || [];
+  const sub = items.reduce((s, i) => s + (i.subtotal || 0), 0);
+  const catalog = items.reduce((s, i) => s + (i.occasional ? 0 : (i.subtotal || 0)), 0);
+  if (sub <= 0) return b.total || 0;
+  return (b.total || 0) * (catalog / sub);
+}
+
 function getMonthlyData() {
   const map = {};
   budgets.forEach(b => {
     const month = b.date.slice(0, 7); // YYYY-MM
     if (!map[month]) map[month] = { month, total: 0, qty: 0, count: 0 };
-    map[month].total += b.total;
-    map[month].qty += b.items.reduce((s, i) => s + i.quantity, 0);
+    map[month].total += statsAmount(b);
+    map[month].qty += b.items.reduce((s, i) => s + (i.occasional ? 0 : i.quantity), 0);
     map[month].count += 1;
   });
   return Object.values(map);
@@ -981,6 +1017,7 @@ function renderArticleStats() {
   budgets.forEach(b => {
     if (monthFilter && !b.date.startsWith(monthFilter)) return;
     b.items.forEach(it => {
+      if (it.occasional) return;
       if (!map[it.name]) map[it.name] = { name: it.name, qty: 0, total: 0, cost: 0 };
       map[it.name].qty += it.quantity;
       map[it.name].total += it.subtotal;
@@ -1015,7 +1052,7 @@ function renderClientStats() {
     if (month && b.date.slice(5,7) !== month) return;
     const name = b.clientName;
     if (!map[name]) map[name] = { name, total: 0, count: 0 };
-    map[name].total += b.total;
+    map[name].total += statsAmount(b);
     map[name].count += 1;
   });
   let data = Object.values(map).sort((a,b) => b.total - a.total);
