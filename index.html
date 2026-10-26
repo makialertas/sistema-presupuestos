@@ -157,7 +157,7 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
     <div class="row">
       <div class="col-lg-7">
         <div class="card mb-4">
-          <div class="card-header"><h5>Nuevo Presupuesto</h5></div>
+          <div class="card-header"><h5 id="budgetFormTitle">Nuevo Presupuesto</h5></div>
           <div class="card-body">
             <div class="row mb-3">
               <div class="col-md-6">
@@ -201,7 +201,8 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
               <input class="form-check-input" type="checkbox" id="includeBank" checked onchange="renderTransferInfo()">
               <label class="form-check-label" for="includeBank">Incluir datos bancarios en el presupuesto (PDF y WhatsApp)</label>
             </div>
-            <button class="btn btn-primary mt-3" onclick="saveBudget()">Guardar Presupuesto</button>
+            <button class="btn btn-primary mt-3" id="saveBudgetBtn" onclick="saveBudget()">Guardar Presupuesto</button>
+            <button class="btn btn-secondary mt-3 ms-2 d-none" id="cancelBudgetBtn" onclick="resetBudgetForm()">Cancelar</button>
           </div>
         </div>
       </div>
@@ -381,6 +382,7 @@ let budgets = JSON.parse(localStorage.getItem(STORAGE.budgets) || '[]');
 let company = JSON.parse(localStorage.getItem(STORAGE.company) || '{}');
 
 let currentItems = [];
+let editingBudgetId = null;
 let monthlySort = 'date';
 let articleSort = 'qty';
 
@@ -660,31 +662,73 @@ function saveBudget() {
   if (!date) return alert('Seleccione una fecha');
   const client = clients.find(c => c.id === clientId);
   const t = calcTotals();
-  const nextNumber = budgets.length ? Math.max(...budgets.map(b => b.number || 0)) + 1 : 1;
-  const budget = {
-    id: genId(),
-    number: nextNumber,
+  const data = {
     clientId,
-    clientName: client.razonSocial,
-    clientData: { ...client },
+    clientName: client ? client.razonSocial : (document.getElementById('budgetClient').selectedOptions[0]?.textContent || ''),
+    clientData: client ? { ...client } : { razonSocial: document.getElementById('budgetClient').selectedOptions[0]?.textContent || '' },
     date,
-    items: [...currentItems],
+    items: currentItems.map(it => ({ ...it })),
     subtotal: t.subtotal,
     discountType: t.type,
     discountValue: t.value,
     discount: t.discount,
     total: t.total,
-    includeBank: document.getElementById('includeBank').checked,
-    createdAt: new Date().toISOString()
+    includeBank: document.getElementById('includeBank').checked
   };
-  budgets.push(budget);
+  if (editingBudgetId) {
+    const existing = budgets.find(b => b.id === editingBudgetId);
+    if (existing) Object.assign(existing, data);
+  } else {
+    const nextNumber = budgets.length ? Math.max(...budgets.map(b => b.number || 0)) + 1 : 1;
+    budgets.push({
+      id: genId(),
+      number: nextNumber,
+      ...data,
+      createdAt: new Date().toISOString()
+    });
+  }
   saveAll();
+  resetBudgetForm();
+  renderBudgetsList();
+}
+
+function editBudget(id) {
+  const b = budgets.find(x => x.id === id);
+  if (!b) return;
+  editingBudgetId = id;
+  renderBudgetSelects();
+  const clientSel = document.getElementById('budgetClient');
+  if (b.clientId && ![...clientSel.options].some(o => o.value === b.clientId)) {
+    const opt = document.createElement('option');
+    opt.value = b.clientId;
+    opt.textContent = b.clientName || 'Cliente';
+    clientSel.appendChild(opt);
+  }
+  clientSel.value = b.clientId || '';
+  document.getElementById('budgetDate').value = b.date || '';
+  currentItems = (b.items || []).map(it => ({ ...it }));
+  document.getElementById('discountType').value = b.discountType || 'percent';
+  document.getElementById('discountValue').value = b.discountValue || 0;
+  document.getElementById('includeBank').checked = b.includeBank !== false;
+  document.getElementById('budgetFormTitle').textContent = `Editar presupuesto N° ${b.number || ''}`;
+  document.getElementById('saveBudgetBtn').textContent = 'Guardar cambios';
+  document.getElementById('cancelBudgetBtn').classList.remove('d-none');
+  renderItems();
+  document.getElementById('presupuesto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetBudgetForm() {
+  editingBudgetId = null;
   currentItems = [];
   document.getElementById('discountValue').value = '0';
   document.getElementById('discountType').value = 'percent';
-  renderItems();
   document.getElementById('budgetClient').value = '';
-  renderBudgetsList();
+  document.getElementById('includeBank').checked = true;
+  document.getElementById('budgetDate').valueAsDate = new Date();
+  document.getElementById('budgetFormTitle').textContent = 'Nuevo Presupuesto';
+  document.getElementById('saveBudgetBtn').textContent = 'Guardar Presupuesto';
+  document.getElementById('cancelBudgetBtn').classList.add('d-none');
+  renderItems();
 }
 
 function renderBudgetsList() {
@@ -703,6 +747,7 @@ function renderBudgetsList() {
           <input class="form-check-input" type="checkbox" id="bank-${b.id}" ${b.includeBank === false ? '' : 'checked'} onchange="toggleBank('${b.id}', this.checked)">
           <label class="form-check-label small" for="bank-${b.id}">Datos bancarios</label>
         </div>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editBudget('${b.id}')" title="Modificar"><i class="bi bi-pencil"></i></button>
         <button class="btn btn-sm btn-success me-1" onclick="generatePDF('${b.id}')" title="PDF"><i class="bi bi-file-pdf"></i></button>
         <button class="btn btn-sm btn-whatsapp me-1" onclick="shareWhatsApp('${b.id}')" title="WhatsApp"><i class="bi bi-whatsapp"></i></button>
         <button class="btn btn-sm btn-outline-danger" onclick="deleteBudget('${b.id}')"><i class="bi bi-trash"></i></button>
