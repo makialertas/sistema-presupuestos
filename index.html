@@ -663,7 +663,7 @@ function renderItems() {
   tbody.innerHTML = '';
   currentItems.forEach((it, idx) => {
     tbody.innerHTML += `<tr>
-      <td>${it.name}${it.occasional ? ' <span class="text-muted">(ocasional)</span>' : ''}</td>
+      <td>${it.name}</td>
       <td>${it.quantity}</td>
       <td>$${formatMoney(it.unitPrice)}</td>
       <td>$${formatMoney(it.subtotal)}</td>
