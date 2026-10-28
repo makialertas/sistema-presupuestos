@@ -430,6 +430,13 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 
 function formatMoney(n) { return Number(n || 0).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
 
+function formatDateAR(iso) {
+  if (!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  return `${m[3]}/${m[2]}/${m[1].slice(2)}`;
+}
+
 // Bootstrap tabs refresh content
 document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
   btn.addEventListener('shown.bs.tab', (event) => {
@@ -805,7 +812,7 @@ function renderBudgetsList() {
   sorted.forEach(b => {
     html += `<tr>
       <td>${b.number || '-'}</td>
-      <td>${b.date}</td>
+      <td>${formatDateAR(b.date)}</td>
       <td>${b.clientName}</td>
       <td>$${formatMoney(b.total)}</td>
       <td>
@@ -869,7 +876,7 @@ function generatePDF(budgetId, returnBlob = false) {
   doc.setFontSize(14);
   doc.text(`PRESUPUESTO N° ${String(budget.number || 1).padStart(4, '0')}`, 15, y + 10);
   doc.setFontSize(10);
-  doc.text(`Fecha: ${budget.date}`, 15, y + 18);
+  doc.text(`Fecha: ${formatDateAR(budget.date)}`, 15, y + 18);
   doc.text(`Cliente: ${budget.clientName}`, 15, y + 24);
   const c = budget.clientData || {};
   if (c.direccion) doc.text(`Dir: ${c.direccion}`, 15, y + 30);
@@ -913,7 +920,8 @@ function generatePDF(budgetId, returnBlob = false) {
   if (returnBlob) {
     return doc.output('blob');
   } else {
-    doc.save(`Presupuesto_${budget.clientName.replace(/\s+/g,'_')}_${budget.date}.pdf`);
+    const fechaArchivo = formatDateAR(budget.date).replaceAll('/', '-');
+    doc.save(`Presupuesto_${budget.clientName.replace(/\s+/g, '_')}_${fechaArchivo}.pdf`);
   }
 }
 
@@ -921,10 +929,10 @@ async function shareWhatsApp(budgetId) {
   const budget = budgets.find(b => b.id === budgetId);
   if (!budget) return;
   const blob = generatePDF(budgetId, true);
-  const file = new File([blob], `Presupuesto_${budget.date}.pdf`, { type: 'application/pdf' });
+  const file = new File([blob], `Presupuesto_${formatDateAR(budget.date).replace(/\//g,'-')}.pdf`, { type: 'application/pdf' });
   
   const bankText = budget.includeBank === false ? '' : transferLine();
-  const text = `Presupuesto para ${budget.clientName}\nFecha: ${budget.date}\nTotal: $${formatMoney(budget.total)}${bankText ? '\n' + bankText : ''}`;
+  const text = `Presupuesto para ${budget.clientName}\nFecha: ${formatDateAR(budget.date)}\nTotal: $${formatMoney(budget.total)}${bankText ? '\n' + bankText : ''}`;
   
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
