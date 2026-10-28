@@ -216,7 +216,13 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
       <div class="col-lg-5">
         <div class="card">
           <div class="card-header"><h5>Presupuestos Guardados</h5></div>
-          <div class="card-body table-responsive" id="budgetsList"></div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <button class="btn btn-sm btn-outline-primary" id="sortDateBtn" onclick="sortBudgets('date')">Por fecha</button>
+              <button class="btn btn-sm btn-outline-primary" id="sortClientBtn" onclick="sortBudgets('client')">Por cliente</button>
+            </div>
+            <div class="table-responsive" id="budgetsList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -390,6 +396,8 @@ let company = JSON.parse(localStorage.getItem(STORAGE.company) || '{}');
 
 let currentItems = [];
 let editingBudgetId = null;
+let budgetSort = 'date';
+let budgetSortDir = 'desc';
 let monthlySort = 'date';
 let articleSort = 'qty';
 
@@ -759,10 +767,40 @@ function resetBudgetForm() {
   renderItems();
 }
 
+function sortBudgets(type) {
+  if (budgetSort === type) budgetSortDir = budgetSortDir === 'asc' ? 'desc' : 'asc';
+  else {
+    budgetSort = type;
+    budgetSortDir = type === 'date' ? 'desc' : 'asc';
+  }
+  renderBudgetsList();
+}
+
 function renderBudgetsList() {
   const container = document.getElementById('budgetsList');
+  const dateBtn = document.getElementById('sortDateBtn');
+  const clientBtn = document.getElementById('sortClientBtn');
+  if (dateBtn && clientBtn) {
+    const arrow = budgetSortDir === 'asc' ? ' ↑' : ' ↓';
+    dateBtn.textContent = 'Por fecha' + (budgetSort === 'date' ? arrow : '');
+    clientBtn.textContent = 'Por cliente' + (budgetSort === 'client' ? arrow : '');
+    dateBtn.classList.toggle('btn-primary', budgetSort === 'date');
+    dateBtn.classList.toggle('btn-outline-primary', budgetSort !== 'date');
+    clientBtn.classList.toggle('btn-primary', budgetSort === 'client');
+    clientBtn.classList.toggle('btn-outline-primary', budgetSort !== 'client');
+  }
   if (!budgets.length) { container.innerHTML = '<p class="text-muted">No hay presupuestos.</p>'; return; }
-  const sorted = [...budgets].sort((a,b) => b.date.localeCompare(a.date));
+  const dir = budgetSortDir === 'asc' ? 1 : -1;
+  const sorted = [...budgets].sort((a, b) => {
+    if (budgetSort === 'client') {
+      const byName = (a.clientName || '').localeCompare(b.clientName || '', 'es', { sensitivity: 'base' });
+      if (byName) return byName * dir;
+      return b.date.localeCompare(a.date);
+    }
+    const byDate = a.date.localeCompare(b.date);
+    if (byDate) return byDate * dir;
+    return (a.number || 0) - (b.number || 0);
+  });
   let html = '<table class="table table-sm"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Total</th><th></th></tr></thead><tbody>';
   sorted.forEach(b => {
     html += `<tr>
