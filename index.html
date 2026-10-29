@@ -298,13 +298,18 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
     <div class="card mb-4">
       <div class="card-header"><h5>Ventas por Artículo</h5></div>
       <div class="card-body">
-        <div class="row mb-2">
-          <div class="col-md-4">
+        <div class="row g-2 mb-2">
+          <div class="col-md-3">
+            <select id="articleYearFilter" class="form-select form-select-sm" onchange="renderArticleStats()">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+          <div class="col-md-3">
             <select id="articleMonthFilter" class="form-select form-select-sm" onchange="renderArticleStats()">
               <option value="">Todos los meses</option>
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-6">
             <button class="btn btn-sm btn-outline-primary me-1" onclick="sortArticles('qty')">Más vendido</button>
             <button class="btn btn-sm btn-outline-primary me-1" onclick="sortArticles('alpha')">Alfabético</button>
             <button class="btn btn-sm btn-outline-primary" onclick="sortArticles('profit')">% Ganancia</button>
@@ -1029,27 +1034,30 @@ function renderMonthlyStats() {
   container.innerHTML = html;
 }
 
+function fillSelect(el, html, keep) {
+  el.innerHTML = html;
+  if (keep && [...el.options].some(o => o.value === keep)) el.value = keep;
+}
+
 function populateMonthFilters() {
-  const months = [...new Set(budgets.map(b => b.date.slice(0,7)))].sort().reverse();
   const years = [...new Set(budgets.map(b => b.date.slice(0,4)))].sort().reverse();
-  
-  const artSel = document.getElementById('articleMonthFilter');
-  artSel.innerHTML = '<option value="">Todos los meses</option>' + 
-    months.map(m => {
-      const [y, mo] = m.split('-');
-      const name = new Date(y, mo-1).toLocaleString('es-AR', { month: 'long', year: 'numeric' });
-      return `<option value="${m}">${name}</option>`;
-    }).join('');
-  
-  const yearSel = document.getElementById('clientYearFilter');
-  yearSel.innerHTML = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
-  
-  const monthSel = document.getElementById('clientMonthFilter');
-  monthSel.innerHTML = '<option value="">Todos los meses</option>' + 
+  const yearOptions = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  const monthOptions = '<option value="">Todos los meses</option>' +
     Array.from({length:12}, (_,i) => {
       const name = new Date(2000, i).toLocaleString('es-AR', { month: 'long' });
       return `<option value="${String(i+1).padStart(2,'0')}">${name}</option>`;
     }).join('');
+
+  const artYear = document.getElementById('articleYearFilter');
+  const artMonth = document.getElementById('articleMonthFilter');
+  const prevArtMonth = artMonth.value.length === 7 ? artMonth.value.slice(5) : artMonth.value;
+  fillSelect(artYear, yearOptions, artYear.value);
+  fillSelect(artMonth, monthOptions, prevArtMonth);
+
+  const yearSel = document.getElementById('clientYearFilter');
+  const monthSel = document.getElementById('clientMonthFilter');
+  fillSelect(yearSel, yearOptions, yearSel.value);
+  fillSelect(monthSel, monthOptions, monthSel.value);
 }
 
 function sortArticles(type) {
@@ -1058,10 +1066,12 @@ function sortArticles(type) {
 }
 
 function renderArticleStats() {
-  const monthFilter = document.getElementById('articleMonthFilter').value;
+  const year = document.getElementById('articleYearFilter').value;
+  const month = document.getElementById('articleMonthFilter').value;
   const map = {};
   budgets.forEach(b => {
-    if (monthFilter && !b.date.startsWith(monthFilter)) return;
+    if (year && !b.date.startsWith(year)) return;
+    if (month && b.date.slice(5, 7) !== month) return;
     b.items.forEach(it => {
       if (it.occasional) return;
       if (!map[it.name]) map[it.name] = { name: it.name, qty: 0, total: 0, cost: 0 };
