@@ -287,9 +287,9 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
       <div class="card-header"><h5>Facturación por Mes</h5></div>
       <div class="card-body">
         <div class="mb-3">
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="sortMonthly('date')">Por Fecha</button>
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="sortMonthly('total')">Por Facturación</button>
-          <button class="btn btn-sm btn-outline-primary" onclick="sortMonthly('qty')">Por Cant. Artículos</button>
+          <button class="btn btn-sm btn-outline-primary me-1" data-monthly="date" onclick="sortMonthly('date')">Por Fecha</button>
+          <button class="btn btn-sm btn-outline-primary me-1" data-monthly="total" onclick="sortMonthly('total')">Por Facturación</button>
+          <button class="btn btn-sm btn-outline-primary" data-monthly="qty" onclick="sortMonthly('qty')">Por Cant. Artículos</button>
         </div>
         <div id="monthlyCards" class="row g-2 mb-3"></div>
         <div class="table-responsive" id="monthlyStats"></div>
@@ -310,9 +310,9 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
             </select>
           </div>
           <div class="col-md-6">
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="sortArticles('qty')">Más vendido</button>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="sortArticles('alpha')">Alfabético</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="sortArticles('profit')">% Ganancia</button>
+            <button class="btn btn-sm btn-outline-primary me-1" data-article-sort="qty" onclick="sortArticles('qty')">Más vendido</button>
+            <button class="btn btn-sm btn-outline-primary me-1" data-article-sort="alpha" onclick="sortArticles('alpha')">Alfabético</button>
+            <button class="btn btn-sm btn-outline-primary" data-article-sort="profit" onclick="sortArticles('profit')">% Ganancia</button>
           </div>
         </div>
         <div class="table-responsive" id="articleStats"></div>
@@ -405,6 +405,34 @@ let budgetSort = 'date';
 let budgetSortDir = 'desc';
 let monthlySort = 'date';
 let articleSort = 'qty';
+let statsFilters = {};
+try { statsFilters = JSON.parse(localStorage.getItem('app_stats_filters') || '{}'); } catch (e) { statsFilters = {}; }
+if (statsFilters.monthlySort) monthlySort = statsFilters.monthlySort;
+if (statsFilters.articleSort) articleSort = statsFilters.articleSort;
+
+function saveStatsFilters() {
+  const artYear = document.getElementById('articleYearFilter');
+  const artMonth = document.getElementById('articleMonthFilter');
+  const clientYear = document.getElementById('clientYearFilter');
+  const clientMonth = document.getElementById('clientMonthFilter');
+  statsFilters = {
+    monthlySort,
+    articleSort,
+    articleYear: artYear ? artYear.value : (statsFilters.articleYear || ''),
+    articleMonth: artMonth ? artMonth.value : (statsFilters.articleMonth || ''),
+    clientYear: clientYear ? clientYear.value : (statsFilters.clientYear || ''),
+    clientMonth: clientMonth ? clientMonth.value : (statsFilters.clientMonth || '')
+  };
+  localStorage.setItem('app_stats_filters', JSON.stringify(statsFilters));
+}
+
+function markActiveSort(attr, value) {
+  document.querySelectorAll('[' + attr + ']').forEach(btn => {
+    const on = btn.getAttribute(attr) === value;
+    btn.classList.toggle('btn-primary', on);
+    btn.classList.toggle('btn-outline-primary', !on);
+  });
+}
 
 function saveAll() {
   try {
@@ -992,6 +1020,7 @@ function getMonthlyData() {
 
 function sortMonthly(type) {
   monthlySort = type;
+  saveStatsFilters();
   renderMonthlyStats();
 }
 
@@ -1023,7 +1052,7 @@ function renderMonthlyStats() {
 
   // Table
   const container = document.getElementById('monthlyStats');
-  if (!data.length) { container.innerHTML = ''; return; }
+  if (!data.length) { container.innerHTML = ''; markActiveSort('data-monthly', monthlySort); return; }
   let html = '<table class="table table-striped table-sm"><thead><tr><th>Mes</th><th>Facturación</th><th>Cant. Artículos</th><th>N° Presupuestos</th></tr></thead><tbody>';
   data.forEach(d => {
     const [y, m] = d.month.split('-');
@@ -1032,6 +1061,7 @@ function renderMonthlyStats() {
   });
   html += '</tbody></table>';
   container.innerHTML = html;
+  markActiveSort('data-monthly', monthlySort);
 }
 
 function fillSelect(el, html, keep) {
@@ -1051,13 +1081,13 @@ function populateMonthFilters() {
   const artYear = document.getElementById('articleYearFilter');
   const artMonth = document.getElementById('articleMonthFilter');
   const prevArtMonth = artMonth.value.length === 7 ? artMonth.value.slice(5) : artMonth.value;
-  fillSelect(artYear, yearOptions, artYear.value);
-  fillSelect(artMonth, monthOptions, prevArtMonth);
+  fillSelect(artYear, yearOptions, artYear.value || statsFilters.articleYear || '');
+  fillSelect(artMonth, monthOptions, prevArtMonth || statsFilters.articleMonth || '');
 
   const yearSel = document.getElementById('clientYearFilter');
   const monthSel = document.getElementById('clientMonthFilter');
-  fillSelect(yearSel, yearOptions, yearSel.value);
-  fillSelect(monthSel, monthOptions, monthSel.value);
+  fillSelect(yearSel, yearOptions, yearSel.value || statsFilters.clientYear || '');
+  fillSelect(monthSel, monthOptions, monthSel.value || statsFilters.clientMonth || '');
 }
 
 function sortArticles(type) {
@@ -1090,6 +1120,8 @@ function renderArticleStats() {
   else data.sort((a,b) => a.name.localeCompare(b.name));
   
   const container = document.getElementById('articleStats');
+  saveStatsFilters();
+  markActiveSort('data-article-sort', articleSort);
   if (!data.length) { container.innerHTML = '<p class="text-muted">Sin datos.</p>'; return; }
   let html = '<table class="table table-striped"><thead><tr><th>Artículo</th><th>Cantidad Vendida</th><th>Total Vendido</th><th>% Ganancia</th></tr></thead><tbody>';
   data.forEach(d => {
@@ -1114,6 +1146,7 @@ function renderClientStats() {
   let data = Object.values(map).sort((a,b) => b.total - a.total);
   
   const container = document.getElementById('clientStats');
+  saveStatsFilters();
   if (!data.length) { container.innerHTML = '<p class="text-muted">Sin datos.</p>'; return; }
   let html = '<table class="table table-striped"><thead><tr><th>Cliente</th><th>Total Comprado</th><th>N° Presupuestos</th></tr></thead><tbody>';
   data.forEach(d => {
