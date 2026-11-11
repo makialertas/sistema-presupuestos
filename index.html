@@ -1053,11 +1053,12 @@ function renderMonthlyStats() {
   // Table
   const container = document.getElementById('monthlyStats');
   if (!data.length) { container.innerHTML = ''; markActiveSort('data-monthly', monthlySort); return; }
-  let html = '<table class="table table-striped table-sm"><thead><tr><th>Mes</th><th>Facturación</th><th>Cant. Artículos</th><th>N° Presupuestos</th></tr></thead><tbody>';
+  let html = '<table class="table table-striped table-sm"><thead><tr><th>Mes</th><th>Facturación</th><th>Cant. Artículos</th><th>N° Presupuestos</th><th>Promedio x presupuesto</th></tr></thead><tbody>';
   data.forEach(d => {
     const [y, m] = d.month.split('-');
     const monthName = new Date(y, m-1).toLocaleString('es-AR', { month: 'long', year: 'numeric' });
-    html += `<tr><td class="text-capitalize">${monthName}</td><td>$${formatMoney(d.total)}</td><td>${d.qty}</td><td>${d.count}</td></tr>`;
+    const avg = d.count > 0 ? d.total / d.count : 0;
+    html += `<tr><td class="text-capitalize">${monthName}</td><td>$${formatMoney(d.total)}</td><td>${d.qty}</td><td>${d.count}</td><td>$${formatMoney(avg)}</td></tr>`;
   });
   html += '</tbody></table>';
   container.innerHTML = html;
