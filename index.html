@@ -265,6 +265,7 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
           <div class="card-body">
             <input type="hidden" id="clientId">
             <div class="mb-2"><label>Razón Social</label><input id="clientRazon" class="form-control"></div>
+            <div class="mb-2"><label>Dirección</label><input id="clientDir" class="form-control"></div>
             <div class="mb-2"><label>Localidad</label><input id="clientLoc" class="form-control"></div>
             <div class="mb-2"><label>Provincia</label><input id="clientProv" class="form-control"></div>
             <div class="mb-2"><label>CUIT</label><input id="clientCuit" class="form-control"></div>
@@ -279,7 +280,7 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
               </select>
             </div>
             <div class="mb-2"><label>Transporte</label><input id="clientTrans" class="form-control"></div>
-            <div class="mb-2"><label>Dirección</label><input id="clientDir" class="form-control"></div>
+            <div class="mb-2"><label>Dirección Transp.</label><input id="clientTransDir" class="form-control"></div>
             <button class="btn btn-primary" onclick="saveClient()">Guardar</button>
             <button class="btn btn-secondary" onclick="clearClientForm()">Cancelar</button>
           </div>
@@ -596,7 +597,8 @@ function saveClient() {
     provincia: document.getElementById('clientProv').value.trim(),
     cuit: document.getElementById('clientCuit').value.trim(),
     condicionIva: document.getElementById('clientIva').value.trim(),
-    transporte: document.getElementById('clientTrans').value.trim()
+    transporte: document.getElementById('clientTrans').value.trim(),
+    direccionTransporte: document.getElementById('clientTransDir').value.trim()
   };
   if (id) {
     const c = clients.find(x => x.id === id);
@@ -621,6 +623,7 @@ function editClient(id) {
   document.getElementById('clientCuit').value = c.cuit || '';
   document.getElementById('clientIva').value = c.condicionIva || '';
   document.getElementById('clientTrans').value = c.transporte || '';
+  document.getElementById('clientTransDir').value = c.direccionTransporte || '';
   document.getElementById('clientFormTitle').textContent = 'Editar Cliente';
 }
 
@@ -634,7 +637,7 @@ function deleteClient(id) {
 
 function clearClientForm() {
   document.getElementById('clientId').value = '';
-  ['clientRazon','clientDir','clientLoc','clientProv','clientCuit','clientTrans'].forEach(id => document.getElementById(id).value = '');
+  ['clientRazon','clientDir','clientLoc','clientProv','clientCuit','clientTrans','clientTransDir'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('clientIva').value = '';
   document.getElementById('clientFormTitle').textContent = 'Nuevo Cliente';
 }
@@ -931,11 +934,12 @@ function generatePDF(budgetId, returnBlob = false) {
   doc.text(`Cliente: ${budget.clientName}`, 15, y + 24);
   const c = budget.clientData || {};
   let cy = y + 30;
+  if (c.direccion) { doc.text(`Dir: ${c.direccion}`, 15, cy); cy += 6; }
   if (c.localidad || c.provincia) { doc.text([c.localidad, c.provincia].filter(Boolean).join(', '), 15, cy); cy += 6; }
   if (c.cuit) { doc.text(`CUIT: ${c.cuit}`, 15, cy); cy += 6; }
   if (c.condicionIva) { doc.text(`Cond. IVA: ${c.condicionIva}`, 15, cy); cy += 6; }
   if (c.transporte) { doc.text(`Transporte: ${c.transporte}`, 15, cy); cy += 6; }
-  if (c.direccion) { doc.text(`Dir: ${c.direccion}`, 15, cy); cy += 6; }
+  if (c.direccionTransporte) { doc.text(`Dir. Transp.: ${c.direccionTransporte}`, 15, cy); cy += 6; }
   
   const tableY = cy + 4;
   doc.autoTable({
