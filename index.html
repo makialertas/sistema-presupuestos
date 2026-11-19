@@ -1086,12 +1086,13 @@ function renderMonthlyStats() {
   // Table
   const container = document.getElementById('monthlyStats');
   if (!data.length) { container.innerHTML = ''; markActiveSort('data-monthly', monthlySort); return; }
-  let html = '<table class="table table-striped table-sm stats-table"><thead><tr><th>Mes</th><th class="num">Facturación</th><th class="num">Ganancia</th><th class="num">Cant. Artículos</th><th class="num">Cant. de Presupuestos</th><th class="num">Promedio</th></tr></thead><tbody>';
+  let html = '<table class="table table-striped table-sm stats-table"><thead><tr><th>Mes</th><th class="num">Facturación</th><th class="num">Ganancia</th><th class="num">% Ganancia</th><th class="num">Cant. Artículos</th><th class="num">Cant. de Presupuestos</th><th class="num">Promedio</th></tr></thead><tbody>';
   data.forEach(d => {
     const [y, m] = d.month.split('-');
     const label = `${Number(m)}/${y}`;
     const avg = d.count > 0 ? d.total / d.count : 0;
-    html += `<tr><td>${label}</td><td class="num">$${formatMoney(d.total)}</td><td class="num">$${formatMoney(d.profit)}</td><td class="num">${d.qty}</td><td class="num">${d.count}</td><td class="num">$${formatMoney(avg)}</td></tr>`;
+    const pct = d.total > 0 ? (d.profit / d.total) * 100 : 0;
+    html += `<tr><td>${label}</td><td class="num">$${formatMoney(d.total)}</td><td class="num">$${formatMoney(d.profit)}</td><td class="num">${pct.toFixed(1)}%</td><td class="num">${d.qty}</td><td class="num">${d.count}</td><td class="num">$${formatMoney(avg)}</td></tr>`;
   });
   html += '</tbody></table>';
   container.innerHTML = html;
@@ -1183,9 +1184,10 @@ function renderClientStats() {
   const container = document.getElementById('clientStats');
   saveStatsFilters();
   if (!data.length) { container.innerHTML = '<p class="text-muted">Sin datos.</p>'; return; }
-  let html = '<table class="table table-striped table-sm stats-table"><thead><tr><th>Cliente</th><th class="num">Total Comprado</th><th class="num">Ganancia</th><th class="num">N° Presupuestos</th></tr></thead><tbody>';
+  let html = '<table class="table table-striped table-sm stats-table"><thead><tr><th>Cliente</th><th class="num">Total Comprado</th><th class="num">Ganancia</th><th class="num">% Ganancia</th><th class="num">N° Presupuestos</th></tr></thead><tbody>';
   data.forEach(d => {
-    html += `<tr><td>${d.name}</td><td class="num">$${formatMoney(d.total)}</td><td class="num">$${formatMoney(d.profit)}</td><td class="num">${d.count}</td></tr>`;
+    const pct = d.total > 0 ? (d.profit / d.total) * 100 : 0;
+    html += `<tr><td>${d.name}</td><td class="num">$${formatMoney(d.total)}</td><td class="num">$${formatMoney(d.profit)}</td><td class="num">${pct.toFixed(1)}%</td><td class="num">${d.count}</td></tr>`;
   });
   html += '</tbody></table>';
   container.innerHTML = html;
