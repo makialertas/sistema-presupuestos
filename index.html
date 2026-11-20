@@ -118,6 +118,7 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
 .filters-line { display: flex; flex-wrap: nowrap; gap: 4px; }
 .filters-line .btn { flex: 1 1 0; white-space: normal; font-size: .68rem; padding: 4px 3px; min-height: 32px; line-height: 1.15; }
 .stats-table th, .stats-table td { white-space: nowrap; text-align: center; font-variant-numeric: tabular-nums; }
+#itemsTable tr.table-active > * { background-color: rgba(58, 160, 216, .22) !important; }
 @media (max-width: 640px) {
   .app-header { align-items: flex-start; }
   .brand h1 { font-size: 1.15rem; }
@@ -178,15 +179,16 @@ h1, h2, h3, h4, h5, h6, .nav-link, .btn { font-family: Manrope, "Source Sans 3",
               <div class="col-md-5"><select id="itemArticle" class="form-select"><option value="">Seleccionar artículo...</option></select></div>
               <div class="col-md-2"><input type="number" id="itemQty" class="form-control" placeholder="Cant." min="1" value="1"></div>
               <div class="col-md-3"><input type="number" id="itemPrice" class="form-control" placeholder="Precio" step="0.01"></div>
-              <div class="col-md-2"><button class="btn btn-success w-100" onclick="addItem()">Agregar</button></div>
+              <div class="col-md-2"><button class="btn btn-success w-100" id="itemAddBtn" onclick="addItem()">Agregar</button></div>
             </div>
             <div class="row g-2 mb-2">
               <div class="col-md-5"><input id="occasionalName" class="form-control" placeholder="Artículo ocasional"></div>
               <div class="col-md-2"><input type="number" id="occasionalQty" class="form-control" placeholder="Cant." min="1" value="1"></div>
               <div class="col-md-3"><input type="number" id="occasionalPrice" class="form-control" placeholder="Precio" step="0.01"></div>
-              <div class="col-md-2"><button class="btn btn-outline-primary w-100" onclick="addOccasionalItem()">Ocasional</button></div>
+              <div class="col-md-2"><button class="btn btn-outline-primary w-100" id="occasionalAddBtn" onclick="addOccasionalItem()">Ocasional</button></div>
             </div>
             <p class="small text-muted mb-2">El ocasional entra en el total del presupuesto, pero no en las estadísticas.</p>
+            <button class="btn btn-sm btn-secondary d-none mb-2" id="itemCancelBtn" onclick="cancelItemEdit()">Cancelar modificación</button>
             <div class="table-responsive">
               <table class="table table-sm" id="itemsTable">
                 <thead><tr><th>Artículo</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
@@ -417,6 +419,7 @@ let company = JSON.parse(localStorage.getItem(STORAGE.company) || '{}');
 
 let currentItems = [];
 let editingBudgetId = null;
+let editingItemIndex = null;
 let budgetSort = 'date';
 let budgetSortDir = 'desc';
 let monthlySort = 'date';
@@ -667,18 +670,25 @@ function addItem() {
   if (!artId) return alert('Seleccione un artículo');
   const art = articles.find(a => a.id === artId);
   if (!art) return;
-  currentItems.push({
+  const item = {
     articleId: artId,
     name: art.name,
     quantity: qty,
     unitPrice: price,
     unitCost: art.cost || 0,
     subtotal: qty * price
-  });
+  };
+  if (editingItemIndex != null && currentItems[editingItemIndex] && !currentItems[editingItemIndex].occasional) {
+    currentItems[editingItemIndex] = item;
+    editingItemIndex = null;
+  } else {
+    currentItems.push(item);
+  }
   renderItems();
   document.getElementById('itemQty').value = 1;
   document.getElementById('itemPrice').value = '';
   document.getElementById('itemArticle').value = '';
+  syncItemButtons();
 }
 
 function addOccasionalItem() {
@@ -687,7 +697,7 @@ function addOccasionalItem() {
   const price = parseFloat(document.getElementById('occasionalPrice').value) || 0;
   if (!name) return alert('Escribí el nombre del artículo ocasional');
   if (qty <= 0) return alert('La cantidad debe ser mayor a 0');
-  currentItems.push({
+  const item = {
     articleId: null,
     name,
     quantity: qty,
@@ -695,11 +705,18 @@ function addOccasionalItem() {
     unitCost: 0,
     subtotal: qty * price,
     occasional: true
-  });
+  };
+  if (editingItemIndex != null && currentItems[editingItemIndex] && currentItems[editingItemIndex].occasional) {
+    currentItems[editingItemIndex] = item;
+    editingItemIndex = null;
+  } else {
+    currentItems.push(item);
+  }
   renderItems();
   document.getElementById('occasionalName').value = '';
   document.getElementById('occasionalQty').value = 1;
   document.getElementById('occasionalPrice').value = '';
+  syncItemButtons();
 }
 
 function calcTotals() {
@@ -731,12 +748,16 @@ function renderItems() {
   const tbody = document.querySelector('#itemsTable tbody');
   tbody.innerHTML = '';
   currentItems.forEach((it, idx) => {
-    tbody.innerHTML += `<tr>
+    const active = editingItemIndex === idx ? ' class="table-active"' : '';
+    tbody.innerHTML += `<tr${active}>
       <td>${it.name}</td>
       <td>${it.quantity}</td>
       <td>$${formatMoney(it.unitPrice)}</td>
       <td>$${formatMoney(it.subtotal)}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="removeItem(${idx})"><i class="bi bi-x"></i></button></td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="editItem(${idx})" title="Modificar"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="removeItem(${idx})" title="Quitar"><i class="bi bi-x"></i></button>
+      </td>
     </tr>`;
   });
   const t = calcTotals();
@@ -748,7 +769,61 @@ function renderItems() {
 
 function removeItem(idx) {
   currentItems.splice(idx, 1);
+  if (editingItemIndex === idx) editingItemIndex = null;
+  else if (editingItemIndex != null && idx < editingItemIndex) editingItemIndex -= 1;
+  syncItemButtons();
   renderItems();
+}
+
+function editItem(idx) {
+  const it = currentItems[idx];
+  if (!it) return;
+  editingItemIndex = idx;
+  if (it.occasional) {
+    document.getElementById('occasionalName').value = it.name;
+    document.getElementById('occasionalQty').value = it.quantity;
+    document.getElementById('occasionalPrice').value = it.unitPrice;
+    document.getElementById('itemArticle').value = '';
+    document.getElementById('itemQty').value = 1;
+    document.getElementById('itemPrice').value = '';
+  } else {
+    const sel = document.getElementById('itemArticle');
+    if (it.articleId && ![...sel.options].some(o => o.value === it.articleId)) {
+      const opt = document.createElement('option');
+      opt.value = it.articleId;
+      opt.textContent = it.name;
+      opt.dataset.price = it.unitPrice;
+      sel.appendChild(opt);
+    }
+    sel.value = it.articleId || '';
+    document.getElementById('itemQty').value = it.quantity;
+    document.getElementById('itemPrice').value = it.unitPrice;
+    document.getElementById('occasionalName').value = '';
+  }
+  syncItemButtons();
+  renderItems();
+}
+
+function cancelItemEdit() {
+  editingItemIndex = null;
+  document.getElementById('itemArticle').value = '';
+  document.getElementById('itemQty').value = 1;
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('occasionalName').value = '';
+  document.getElementById('occasionalQty').value = 1;
+  document.getElementById('occasionalPrice').value = '';
+  syncItemButtons();
+  renderItems();
+}
+
+function syncItemButtons() {
+  const it = editingItemIndex != null ? currentItems[editingItemIndex] : null;
+  const addBtn = document.getElementById('itemAddBtn');
+  const occBtn = document.getElementById('occasionalAddBtn');
+  const cancelBtn = document.getElementById('itemCancelBtn');
+  if (addBtn) addBtn.textContent = it && !it.occasional ? 'Actualizar' : 'Agregar';
+  if (occBtn) occBtn.textContent = it && it.occasional ? 'Actualizar' : 'Ocasional';
+  if (cancelBtn) cancelBtn.classList.toggle('d-none', !it);
 }
 
 function saveBudget() {
@@ -816,6 +891,7 @@ function editBudget(id) {
 
 function resetBudgetForm() {
   editingBudgetId = null;
+  editingItemIndex = null;
   currentItems = [];
   document.getElementById('discountValue').value = '0';
   document.getElementById('discountType').value = 'percent';
@@ -825,6 +901,7 @@ function resetBudgetForm() {
   document.getElementById('budgetFormTitle').textContent = 'Nuevo Presupuesto';
   document.getElementById('saveBudgetBtn').textContent = 'Guardar Presupuesto';
   document.getElementById('cancelBudgetBtn').classList.add('d-none');
+  syncItemButtons();
   renderItems();
 }
 
